@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Brand teal — replaces Tailwind's default blue scale across the whole app */
+  --color-blue-50: #eef6f6;
+  --color-blue-100: #d7ebea;
+  --color-blue-200: #afd7d5;
+  --color-blue-300: #7fbdb9;
+  --color-blue-400: #4ca19c;
+  --color-blue-500: #2b8681;
+  --color-blue-600: #0e6e6c;
+  --color-blue-700: #0a5755;
+  --color-blue-800: #084544;
+  --color-blue-900: #073938;
+
+  /* Brass accent — new scale, used sparingly as the signature touch */
+  --color-brass-50: #fbf6ec;
+  --color-brass-100: #f4e8cc;
+  --color-brass-200: #e8d09c;
+  --color-brass-300: #dab66c;
+  --color-brass-400: #c99c48;
+  --color-brass-500: #b8853a;
+  --color-brass-600: #9a6c2c;
+  --color-brass-700: #7a5522;
+  --color-brass-800: #5f421b;
+  --color-brass-900: #4c3517;
+
+  /* Ink — deep navy-charcoal for the sidebar */
+  --color-ink-900: #14232b;
+  --color-ink-800: #1c313b;
+  --color-ink-700: #2a4753;
+  --color-ink-600: #3a5c68;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Financial figures get tabular (monospace) numerals so columns of amounts align */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Signature "flow line" — a thin teal-to-brass gradient, a nod to water moving through pipe */
+.flow-line {
+  height: 3px;
+  background: linear-gradient(to left, var(--color-blue-600), var(--color-brass-500));
+}
