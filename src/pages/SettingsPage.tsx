@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Layout } from '../components/Layout';
 import { BranchFormModal } from '../components/BranchFormModal';
+import { WarehouseFormModal } from '../components/WarehouseFormModal';
 import { UserFormModal } from '../components/UserFormModal';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
 import { RoleFormModal } from '../components/RoleFormModal';
 import { RolePermissionsModal } from '../components/RolePermissionsModal';
 import { fetchCompanySettings, updateCompanySettings, type CompanySettings } from '../api/companySettings';
 import { fetchBranches, type Branch } from '../api/branches';
+import { fetchWarehouses, type Warehouse } from '../api/warehouses';
 import { fetchUsers, type User } from '../api/users';
 import { fetchRoles, type Role } from '../api/roles';
 import { ApiError } from '../api/client';
@@ -25,7 +27,7 @@ const emptyCompanyForm = {
 };
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<'company' | 'branches' | 'users' | 'roles'>('company');
+  const [tab, setTab] = useState<'company' | 'branches' | 'warehouses' | 'users' | 'roles'>('company');
 
   // Company settings
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
@@ -40,6 +42,12 @@ export function SettingsPage() {
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [branchFormOpen, setBranchFormOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+
+  // Warehouses
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(true);
+  const [warehouseFormOpen, setWarehouseFormOpen] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
 
   // Users
   const [users, setUsers] = useState<User[]>([]);
@@ -87,6 +95,15 @@ export function SettingsPage() {
   }
 
   useEffect(loadBranches, []);
+
+  function loadWarehouses() {
+    setWarehousesLoading(true);
+    fetchWarehouses()
+      .then(setWarehouses)
+      .finally(() => setWarehousesLoading(false));
+  }
+
+  useEffect(loadWarehouses, []);
 
   function loadUsers() {
     setUsersLoading(true);
@@ -148,6 +165,16 @@ export function SettingsPage() {
     setBranchFormOpen(true);
   }
 
+  function openCreateWarehouse() {
+    setEditingWarehouse(null);
+    setWarehouseFormOpen(true);
+  }
+
+  function openEditWarehouse(warehouse: Warehouse) {
+    setEditingWarehouse(warehouse);
+    setWarehouseFormOpen(true);
+  }
+
   const inputClass =
     'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500';
   const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
@@ -172,6 +199,14 @@ export function SettingsPage() {
           }`}
         >
           الفروع
+        </button>
+        <button
+          onClick={() => setTab('warehouses')}
+          className={`px-4 py-2 text-sm font-medium ${
+            tab === 'warehouses' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-gray-500'
+          }`}
+        >
+          المستودعات
         </button>
         <button
           onClick={() => setTab('users')}
@@ -375,6 +410,72 @@ export function SettingsPage() {
         </>
       )}
 
+      {tab === 'warehouses' && (
+        <>
+          <div className="mb-4 flex justify-end">
+            <button
+              onClick={openCreateWarehouse}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              + مستودع جديد
+            </button>
+          </div>
+
+          {warehousesLoading && <p className="text-gray-400">جارِ التحميل...</p>}
+
+          {!warehousesLoading && (
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 text-start font-medium">المستودع</th>
+                    <th className="px-4 py-3 text-start font-medium">الرمز</th>
+                    <th className="px-4 py-3 text-start font-medium">الفرع</th>
+                    <th className="px-4 py-3 text-start font-medium">الحالة</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {warehouses.map((w) => (
+                    <tr key={w.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{w.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{w.code}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {branches.find((b) => b.id === w.branchId)?.name ?? '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs ${
+                            w.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'
+                          }`}
+                        >
+                          {w.isActive ? 'نشط' : 'معطّل'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        <button
+                          onClick={() => openEditWarehouse(w)}
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          تعديل
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {warehouses.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                        لا توجد مستودعات — أضف مستودع واحد على الأقل لكل فرع عشان تقدر تستخدم المبيعات والمشتريات والمخزون
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
       {tab === 'users' && (
         <>
           <div className="mb-4 flex justify-end">
@@ -510,6 +611,12 @@ export function SettingsPage() {
         branch={editingBranch}
         onClose={() => setBranchFormOpen(false)}
         onSaved={loadBranches}
+      />
+      <WarehouseFormModal
+        open={warehouseFormOpen}
+        warehouse={editingWarehouse}
+        onClose={() => setWarehouseFormOpen(false)}
+        onSaved={loadWarehouses}
       />
       <UserFormModal
         open={userFormOpen}

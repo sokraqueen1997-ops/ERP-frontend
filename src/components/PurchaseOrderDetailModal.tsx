@@ -7,6 +7,7 @@ import {
   type PurchaseOrder,
 } from '../api/purchases';
 import { ApiError } from '../api/client';
+import { StatusStepper } from './StatusStepper';
 
 interface PurchaseOrderDetailModalProps {
   open: boolean;
@@ -23,13 +24,27 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'ملغى',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-600',
-  CONFIRMED: 'bg-blue-50 text-blue-700',
-  PARTIALLY_RECEIVED: 'bg-amber-50 text-amber-700',
-  RECEIVED: 'bg-green-50 text-green-700',
-  CANCELLED: 'bg-red-50 text-red-700',
-};
+const PURCHASE_STAGES = [
+  { key: 'DRAFT', label: 'مسودة' },
+  { key: 'CONFIRMED', label: 'معتمد' },
+  { key: 'RECEIVED', label: 'مستلم' },
+];
+
+/** Maps a purchase order status to its stepper position. */
+function purchaseStageInfo(status: string) {
+  switch (status) {
+    case 'DRAFT':
+      return { index: 0, inProgress: false };
+    case 'CONFIRMED':
+      return { index: 1, inProgress: false };
+    case 'PARTIALLY_RECEIVED':
+      return { index: 2, inProgress: true };
+    case 'RECEIVED':
+      return { index: 2, inProgress: false };
+    default:
+      return { index: 0, inProgress: false };
+  }
+}
 
 function money(n: string) {
   return new Intl.NumberFormat('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n));
@@ -143,9 +158,16 @@ export function PurchaseOrderDetailModal({ open, orderId, onClose, onChanged }: 
                   {order.supplier?.name} — {order.branch?.name} — {order.warehouse?.name}
                 </p>
               </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_COLORS[order.status]}`}>
-                {STATUS_LABELS[order.status] ?? order.status}
-              </span>
+            </div>
+
+            <div className="mb-5 overflow-x-auto pb-1">
+              <StatusStepper
+                stages={PURCHASE_STAGES}
+                currentIndex={purchaseStageInfo(order.status).index}
+                inProgress={purchaseStageInfo(order.status).inProgress}
+                cancelled={order.status === 'CANCELLED'}
+                cancelledLabel={STATUS_LABELS.CANCELLED}
+              />
             </div>
 
             <div className="mb-4 overflow-hidden rounded-lg border border-gray-200">
