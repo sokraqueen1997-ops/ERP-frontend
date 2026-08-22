@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { fetchSupplierStatement, type Supplier, type SupplierTransaction } from '../api/suppliers';
+import {
+  fetchSupplierStatement,
+  openSupplierStatementPrint,
+  type Supplier,
+  type SupplierTransaction,
+} from '../api/suppliers';
 
 interface SupplierStatementModalProps {
   open: boolean;
@@ -28,23 +33,32 @@ export function SupplierStatementModal({ open, supplier, onClose }: SupplierStat
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   useEffect(() => {
     if (!open || !supplier) return;
     setLoading(true);
-    fetchSupplierStatement(supplier.id, page)
+    fetchSupplierStatement(supplier.id, page, { from: from || undefined, to: to || undefined })
       .then((res) => {
         setItems(res.items);
         setTotalPages(res.totalPages);
       })
       .finally(() => setLoading(false));
-  }, [open, supplier, page]);
+  }, [open, supplier, page, from, to]);
 
   useEffect(() => {
-    if (open) setPage(1);
+    if (open) {
+      setPage(1);
+      setFrom('');
+      setTo('');
+    }
   }, [open, supplier]);
 
   if (!open || !supplier) return null;
+
+  const inputClass =
+    'rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -61,6 +75,39 @@ export function SupplierStatementModal({ open, supplier, onClose }: SupplierStat
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             ✕
+          </button>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-gray-50 p-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">من تاريخ</label>
+            <input
+              type="date"
+              className={inputClass}
+              value={from}
+              onChange={(e) => {
+                setPage(1);
+                setFrom(e.target.value);
+              }}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">إلى تاريخ</label>
+            <input
+              type="date"
+              className={inputClass}
+              value={to}
+              onChange={(e) => {
+                setPage(1);
+                setTo(e.target.value);
+              }}
+            />
+          </div>
+          <button
+            onClick={() => openSupplierStatementPrint(supplier.id, { from: from || undefined, to: to || undefined })}
+            className="rounded-lg bg-gray-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            طباعة / حفظ PDF
           </button>
         </div>
 

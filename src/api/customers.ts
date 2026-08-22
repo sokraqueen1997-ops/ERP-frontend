@@ -54,6 +54,40 @@ export interface StatementResponse {
   totalPages: number;
 }
 
-export function fetchCustomerStatement(id: string, page = 1) {
-  return apiFetch<StatementResponse>(`/customers/${id}/statement?page=${page}`);
+export interface StatementDateRange {
+  from?: string;
+  to?: string;
+}
+
+export function fetchCustomerStatement(id: string, page = 1, range: StatementDateRange = {}) {
+  const params = new URLSearchParams({ page: String(page) });
+  if (range.from) params.set('from', range.from);
+  if (range.to) params.set('to', range.to);
+  return apiFetch<StatementResponse>(`/customers/${id}/statement?${params.toString()}`);
+}
+
+/**
+ * Fetches the printable statement HTML and opens it in a new tab — the tab
+ * is opened synchronously (before the network request) so browsers don't
+ * treat this as an unsolicited popup.
+ */
+export async function openCustomerStatementPrint(id: string, range: StatementDateRange = {}) {
+  const newTab = window.open('', '_blank');
+  try {
+    const params = new URLSearchParams();
+    if (range.from) params.set('from', range.from);
+    if (range.to) params.set('to', range.to);
+    const qs = params.toString();
+    const html = await apiFetch<string>(`/customers/${id}/statement/print${qs ? `?${qs}` : ''}`);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    if (newTab) {
+      newTab.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (err) {
+    newTab?.close();
+    throw err;
+  }
 }

@@ -76,10 +76,28 @@ export function fetchSales(params: { customerId?: string; page?: number } = {}) 
   return apiFetch<SaleListResponse>(`/sales${qs ? `?${qs}` : ''}`);
 }
 
-/** Fetches the printable invoice HTML and opens it in a new tab (auth header required, so this can't be a plain link). */
+/**
+ * Fetches the printable invoice HTML and opens it in a new tab (auth header
+ * required, so this can't be a plain link). The blank tab is opened
+ * synchronously, before the network request, so browsers don't treat this
+ * as an unsolicited popup (which they silently block once an `await` has
+ * happened first) — we just point the already-open tab at the content once
+ * it arrives.
+ */
 export async function openInvoiceInNewTab(saleId: string) {
-  const html = await apiFetch<string>(`/sales/${saleId}/invoice`);
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+  const newTab = window.open('', '_blank');
+  try {
+    const html = await apiFetch<string>(`/sales/${saleId}/invoice`);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    if (newTab) {
+      newTab.location.href = url;
+    } else {
+      // Popup blocked even for the synchronous open (rare) — fall back to same-tab navigation.
+      window.location.href = url;
+    }
+  } catch (err) {
+    newTab?.close();
+    throw err;
+  }
 }

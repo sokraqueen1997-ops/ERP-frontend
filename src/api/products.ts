@@ -6,7 +6,7 @@ export interface Product {
   barcode: string | null;
   name: string;
   description: string | null;
-  categoryId: string;
+  categoryId: string | null;
   supplierId: string | null;
   manufacturer: string | null;
   imageUrl: string | null;
@@ -20,7 +20,7 @@ export interface Product {
   vatRate: string;
   isVatApplicable: boolean;
   isActive: boolean;
-  category?: { id: string; name: string };
+  category?: { id: string; name: string } | null;
   supplier?: { id: string; name: string } | null;
 }
 
@@ -44,7 +44,7 @@ export interface ProductInput {
   barcode?: string;
   name: string;
   description?: string;
-  categoryId: string;
+  categoryId?: string;
   supplierId?: string;
   manufacturer?: string;
   unit?: string;

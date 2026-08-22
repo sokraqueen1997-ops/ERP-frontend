@@ -51,7 +51,7 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         barcode: product.barcode ?? '',
         name: product.name,
         description: product.description ?? '',
-        categoryId: product.categoryId,
+        categoryId: product.categoryId ?? '',
         supplierId: product.supplierId ?? '',
         manufacturer: product.manufacturer ?? '',
         unit: product.unit,
@@ -87,7 +87,7 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
       barcode: form.barcode || undefined,
       name: form.name,
       description: form.description || undefined,
-      categoryId: form.categoryId,
+      categoryId: form.categoryId || undefined,
       supplierId: form.supplierId || undefined,
       manufacturer: form.manufacturer || undefined,
       unit: form.unit || undefined,
@@ -166,12 +166,11 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>{t('productForm.category')} *</label>
+              <label className={labelClass}>{t('productForm.category')}</label>
               <select
                 className={inputClass}
                 value={form.categoryId}
                 onChange={(e) => update('categoryId', e.target.value)}
-                required
               >
                 <option value="">{t('productForm.selectCategory')}</option>
                 {categories.map((c) => (

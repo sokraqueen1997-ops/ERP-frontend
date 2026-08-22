@@ -3,6 +3,8 @@ import { Layout } from '../components/Layout';
 import { AccountFormModal } from '../components/AccountFormModal';
 import { VoucherModal } from '../components/VoucherModal';
 import { AccountLedgerModal } from '../components/AccountLedgerModal';
+import { CustomerStatementModal } from '../components/CustomerStatementModal';
+import { SupplierStatementModal } from '../components/SupplierStatementModal';
 import {
   fetchAccounts,
   fetchProfitLoss,
@@ -13,6 +15,8 @@ import {
   type VatReport,
   type AgingReport,
 } from '../api/accounting';
+import { fetchCustomers, type Customer } from '../api/customers';
+import { fetchSuppliers, type Supplier } from '../api/suppliers';
 import { buildWhatsAppLink } from '../utils/whatsapp';
 
 function money(n: number | string) {
@@ -29,7 +33,7 @@ function today() {
 }
 
 export function AccountingPage() {
-  const [tab, setTab] = useState<'accounts' | 'reports' | 'aging'>('accounts');
+  const [tab, setTab] = useState<'accounts' | 'reports' | 'aging' | 'partyReports'>('accounts');
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +53,14 @@ export function AccountingPage() {
   const [aging, setAging] = useState<AgingReport | null>(null);
   const [agingLoading, setAgingLoading] = useState(false);
   const [agingError, setAgingError] = useState<string | null>(null);
+
+  // Customer & supplier reports
+  const [partySubTab, setPartySubTab] = useState<'customers' | 'suppliers'>('customers');
+  const [partyCustomers, setPartyCustomers] = useState<Customer[]>([]);
+  const [partySuppliers, setPartySuppliers] = useState<Supplier[]>([]);
+  const [partyLoading, setPartyLoading] = useState(false);
+  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
+  const [statementSupplier, setStatementSupplier] = useState<Supplier | null>(null);
 
   function loadAccounts() {
     setLoading(true);
@@ -92,6 +104,22 @@ export function AccountingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  function loadPartyReports() {
+    setPartyLoading(true);
+    Promise.all([fetchCustomers(), fetchSuppliers()])
+      .then(([customersRes, suppliersRes]) => {
+        // Highest outstanding balance first — most actionable for a report.
+        setPartyCustomers([...customersRes].sort((a, b) => Number(b.balance) - Number(a.balance)));
+        setPartySuppliers([...suppliersRes].sort((a, b) => Number(b.balance) - Number(a.balance)));
+      })
+      .finally(() => setPartyLoading(false));
+  }
+
+  useEffect(() => {
+    if (tab === 'partyReports' && partyCustomers.length === 0 && partySuppliers.length === 0) loadPartyReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
   function openVoucher(account: Account, kind: 'RECEIPT' | 'PAYMENT') {
     setVoucherAccount(account);
     setVoucherKind(kind);
@@ -104,7 +132,7 @@ export function AccountingPage() {
     <Layout>
       <h1 className="mb-6 text-xl font-bold text-gray-800">المحاسبة</h1>
 
-      <div className="mb-6 flex gap-2 border-b border-gray-200">
+      <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200">
         <button
           onClick={() => setTab('accounts')}
           className={`px-4 py-2 text-sm font-medium ${
@@ -128,6 +156,14 @@ export function AccountingPage() {
           }`}
         >
           أعمار الديون
+        </button>
+        <button
+          onClick={() => setTab('partyReports')}
+          className={`px-4 py-2 text-sm font-medium ${
+            tab === 'partyReports' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-gray-500'
+          }`}
+        >
+          تقارير العملاء والموردين
         </button>
       </div>
 
@@ -371,6 +407,121 @@ export function AccountingPage() {
         </>
       )}
 
+      {tab === 'partyReports' && (
+        <>
+          <div className="mb-6 flex gap-2">
+            <button
+              onClick={() => setPartySubTab('customers')}
+              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                partySubTab === 'customers' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              العملاء
+            </button>
+            <button
+              onClick={() => setPartySubTab('suppliers')}
+              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                partySubTab === 'suppliers' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              الموردون
+            </button>
+          </div>
+
+          {partyLoading && <p className="text-gray-400">جارِ التحميل...</p>}
+
+          {!partyLoading && partySubTab === 'customers' && (
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 text-start font-medium">العميل</th>
+                    <th className="px-4 py-3 text-start font-medium">الجوال</th>
+                    <th className="px-4 py-3 text-start font-medium">الرصيد (مستحق منه)</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {partyCustomers.map((c) => (
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{c.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{c.phone ?? '—'}</td>
+                      <td
+                        className={`px-4 py-3 font-medium ${
+                          Number(c.balance) > 0 ? 'text-red-600' : 'text-green-600'
+                        }`}
+                      >
+                        {money(c.balance)} ر.س
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        <button
+                          onClick={() => setStatementCustomer(c)}
+                          className="text-sm text-blue-600 hover:underline"
+                      >
+                        كشف حساب
+                      </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {partyCustomers.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                        لا يوجد عملاء بعد
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!partyLoading && partySubTab === 'suppliers' && (
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 text-start font-medium">المورد</th>
+                    <th className="px-4 py-3 text-start font-medium">الجوال</th>
+                    <th className="px-4 py-3 text-start font-medium">الرصيد (مستحق له)</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {partySuppliers.map((s) => (
+                    <tr key={s.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{s.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{s.phone ?? '—'}</td>
+                      <td
+                        className={`px-4 py-3 font-medium ${
+                          Number(s.balance) > 0 ? 'text-red-600' : 'text-green-600'
+                        }`}
+                      >
+                        {money(s.balance)} ر.س
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        <button
+                          onClick={() => setStatementSupplier(s)}
+                          className="text-sm text-blue-600 hover:underline"
+                      >
+                        كشف حساب
+                      </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {partySuppliers.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                        لا يوجد موردون بعد
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
       <AccountFormModal open={formOpen} account={editingAccount} onClose={() => setFormOpen(false)} onSaved={loadAccounts} />
       <VoucherModal
         open={voucherAccount !== null}
@@ -380,6 +531,16 @@ export function AccountingPage() {
         onSaved={loadAccounts}
       />
       <AccountLedgerModal open={ledgerAccount !== null} account={ledgerAccount} onClose={() => setLedgerAccount(null)} />
+      <CustomerStatementModal
+        open={statementCustomer !== null}
+        customer={statementCustomer}
+        onClose={() => setStatementCustomer(null)}
+      />
+      <SupplierStatementModal
+        open={statementSupplier !== null}
+        supplier={statementSupplier}
+        onClose={() => setStatementSupplier(null)}
+      />
     </Layout>
   );
 }

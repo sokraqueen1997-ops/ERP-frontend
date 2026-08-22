@@ -8,6 +8,7 @@ import { fetchProducts, type Product } from '../api/products';
 import { createSale, openInvoiceInNewTab, type Sale } from '../api/sales';
 import { ApiError } from '../api/client';
 import { buildWhatsAppLink } from '../utils/whatsapp';
+import { downloadInvoiceImage } from '../utils/invoiceImage';
 
 const PRICE_FIELD_BY_TYPE: Record<string, keyof Product> = {
   RETAIL: 'priceRetail',
@@ -232,6 +233,7 @@ export function SalesPage() {
                 href={waLink}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => downloadInvoiceImage(completedSale.id, completedSale.invoiceNumber)}
                 className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
               >
                 {t('sales.sendWhatsApp')}
